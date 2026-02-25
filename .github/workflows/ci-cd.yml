@@ -1,0 +1,71 @@
+name: Smart Delivery CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Tests unitaires
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Installer les dépendances
+        run: |
+          pip install kafka-python flask flask-socketio
+
+      - name: Test syntaxe producer
+        run: python -m py_compile producer.py && echo "producer.py OK"
+
+      - name: Test syntaxe alert service
+        run: python -m py_compile alert-service.py && echo "alert-service.py OK"
+
+      - name: Test syntaxe archiver
+        run: python -m py_compile archiver.py && echo "archiver.py OK"
+
+  build-and-push:
+    name: Build et Push Docker Images
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build et Push Producer
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: docker/Dockerfile.producer
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/smart-delivery-producer:latest
+
+      - name: Build et Push Alert Service
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: docker/Dockerfile.alert
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/smart-delivery-alert:latest
+
+      - name: Build et Push Archiver
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: docker/Dockerfile.archiver
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/smart-delivery-archiver:latest
