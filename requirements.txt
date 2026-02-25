@@ -1,0 +1,5 @@
+kafka-python==2.0.2
+flask==3.0.0
+flask-socketio==5.3.6
+folium==0.15.1
+pandas==2.1.0
